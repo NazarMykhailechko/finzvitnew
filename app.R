@@ -34,8 +34,8 @@ ui <- fluidPage(
   shinyjs::useShinyjs(),
   # add logout button UI 
   div(class = "pull-right", logoutUI(id = "logout", label="Вийти", 
-                                     icon = icon("cog",
-                                     class = "fa-spin"))),
+                                     icon = icon("angle-right",
+                                     class = "normal"))),
   # add login panel UI function
   loginUI(id = "login", title = "Вхід до системи", 
                         user_title = "Логін",
