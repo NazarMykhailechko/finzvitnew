@@ -38,7 +38,8 @@ ui <- fluidPage(
   loginUI(id = "login", title = "Вхід до системи", 
                         user_title = "Логін",
                         pass_title = "Пароль",
-                        error_message = "Невірний логін або пароль!"),
+                        error_message = "Невірний логін або пароль!",
+                        login_title = "Вхід"),
   
   # setup table output to show user info after login
   tableOutput("user_table"),
