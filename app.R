@@ -14,14 +14,42 @@ library(reshape2)
 library(dplyr)
 library(tidyr)
 library(openxlsx)
+library(shinyauthr)
+library(shinyjs)
 
+
+user_base <- data.frame(
+  user = c("finzvit", "user2"),
+  password = c("accord", "pass2"), 
+  permissions = c("admin", "standard"),
+  name = c("User One", "User Two"),
+  stringsAsFactors = FALSE,
+  row.names = NULL
+)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
+  
+  # must turn shinyjs on
+  shinyjs::useShinyjs(),
+  # add logout button UI 
+  div(class = "pull-right", logoutUI(id = "logout")),
+  # add login panel UI function
+  loginUI(id = "login", title = "Вхід до системи", 
+                        user_title = "Логін",
+                        pass_title = "Пароль",
+                        error_message = "Невірний логін або пароль!"),
+  
+  # setup table output to show user info after login
+  tableOutput("user_table"),
+  
+  
      theme = shinytheme("superhero"),
 
     # Application title
-     titlePanel(title="Фінансова звітність підприємств"),
+  div( id = "display_content",
+       
+       titlePanel(title="Фінансова звітність підприємств"),
   
 
     # Sidebar with a slider input for number of bins 
@@ -48,10 +76,53 @@ ui <- fluidPage(
 
         )
     )
+)  %>% shinyjs::hidden()
+
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+  
+  
+  
+  # call the logout module with reactive trigger to hide/show
+  logout_init <- shinyauthr::logoutServer(
+    id = "logout",
+    active = reactive(credentials()$user_auth)
+  )
+  
+  # call login module supplying data frame, user and password cols
+  # and reactive trigger
+  credentials <- shinyauthr::loginServer(
+    id = "login",
+    data = user_base,
+    user_col = user,
+    pwd_col = password,
+    #sodium_hashed = TRUE,
+    log_out = reactive(logout_init())
+  )
+  
+  # pulls out the user information returned from login module
+  user_data <- reactive({credentials()$info})
+  
+  shiny::observe({
+    req(credentials()$user_auth)
+    shinyjs::show(id = "display_content")
+  })
+  
+  shiny::observe({
+    req(!credentials()$user_auth)
+    shinyjs::hide(id = "display_content")
+  })
+  
+  
+  #output$user_table <- renderText({
+    # use req to only render results when credentials()$user_auth is TRUE
+    #req(credentials()$user_auth)
+    #paste("Ви увійшли як: ", user_data()$user)
+  #})
+  
+  
   
 
   observeEvent(input$act,{
