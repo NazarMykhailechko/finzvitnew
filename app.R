@@ -13,14 +13,12 @@ library(jsonlite)
 library(reshape2)
 library(dplyr)
 library(tidyr)
-#library(gt)
-#library(DT)
-#library(tibble)
+library(openxlsx)
 
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-     theme = shinytheme("paper"),
+     theme = shinytheme("superhero"),
 
     # Application title
      titlePanel(title="Фінансова звітність підприємств"),
@@ -30,8 +28,9 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
           
-          textInput("okpo", "Введіть єдрпоу підприємства",),
+          textInput("okpo", "Введіть єдрпоу підприємства:",),
           actionButton("act","Знайти"),
+          downloadButton('downloadData', 'Зберегти в .xlsx')
         ),
 
         # Show a plot of the generated distribution
@@ -204,6 +203,36 @@ server <- function(input, output) {
       companyInfo
     }) 
     
+    
+    #output$downloadData <- downloadHandler(
+      
+     # filename = function() {paste0(companyName, ".xlsx")},
+    #  content = function(file) {write_xlsx(balance, path = file)}
+      
+    #)
+    
+    output$downloadData <- downloadHandler(
+      
+      filename = function() {paste0(companyName, ".xlsx")},
+      content = function(file) {
+
+         
+         wb <- createWorkbook()
+         addWorksheet(wb, "Balance")
+         writeData(wb, "Balance", balance, rowNames = FALSE)
+         setColWidths(wb, "Balance", cols = c(1, 2, 3, 4, 5, 6, 7), widths = c("auto", 70, 10, "auto", "auto", "auto", "auto"))
+         addWorksheet(wb, "Finrez")
+         writeData(wb, "Finrez", finrez, rowNames = FALSE)
+         setColWidths(wb, "Finrez", cols = c(1, 2, 3, 4, 5, 6, 7), widths = c("auto", 70, 10, "auto", "auto", "auto", "auto"))
+         addWorksheet(wb, "CompanyInfo")
+         writeData(wb, "CompanyInfo", companyInfo, rowNames = TRUE)
+         setColWidths(wb, "CompanyInfo", cols = c(1, 2), widths = c("auto", "auto"))
+         saveWorkbook(wb, file, overwrite = TRUE)
+        
+        
+        }
+      
+    )
     
   })
 }
