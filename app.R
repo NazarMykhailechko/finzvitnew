@@ -33,13 +33,13 @@ ui <- fluidPage(
   # must turn shinyjs on
   shinyjs::useShinyjs(),
   # add logout button UI 
-  div(class = "pull-right", logoutUI(id = "logout")),
+  div(class = "pull-right", logoutUI(id = "logout", label="Вийти", icon = icon("arrow-right-from-bracket"))),
   # add login panel UI function
   loginUI(id = "login", title = "Вхід до системи", 
                         user_title = "Логін",
                         pass_title = "Пароль",
                         error_message = "Невірний логін або пароль!",
-                        login_title = "Вхід"),
+                        login_title = "Увійти"),
   
   # setup table output to show user info after login
   tableOutput("user_table"),
@@ -58,7 +58,7 @@ ui <- fluidPage(
         sidebarPanel(
           
           textInput("okpo", "Введіть єдрпоу підприємства:",),
-          actionButton("act","Знайти"),
+          actionButton("act","Знайти",icon = icon("magnifying-glass")),
           downloadButton('downloadData', 'Зберегти в .xlsx')
         ),
 
