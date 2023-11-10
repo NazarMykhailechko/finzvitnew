@@ -35,7 +35,7 @@ ui <- fluidPage(
   # add logout button UI 
   div(class = "pull-right", logoutUI(id = "logout", label="Вийти", 
                                      icon = icon("arrow-right-from-bracket",
-                                     class = "fa-sharp fa-light fa-arrow-right-from-bracket"))),
+                                     class = "fa-light"))),
   # add login panel UI function
   loginUI(id = "login", title = "Вхід до системи", 
                         user_title = "Логін",
