@@ -34,7 +34,8 @@ ui <- fluidPage(
   shinyjs::useShinyjs(),
   # add logout button UI 
   div(class = "pull-right", logoutUI(id = "logout", label="Вийти", 
-                                     icon = icon("arrow-right-from-bracket"))),
+                                     icon = icon("arrow-right-from-bracket",
+                                     class = "fa-sharp fa-light fa-arrow-right-from-bracket"))),
   # add login panel UI function
   loginUI(id = "login", title = "Вхід до системи", 
                         user_title = "Логін",
@@ -59,9 +60,7 @@ ui <- fluidPage(
         sidebarPanel(
           
           textInput("okpo", "Введіть єдрпоу підприємства:",),
-          actionButton("act","Знайти",icon = icon("magnifying-glass",
-                                             class = "fa-sharp fa-light fa-magnifying-glass fa-fw",
-                                             lib = "font-awesome")),
+          actionButton("act","Знайти",icon = icon("magnifying-glass")),
           downloadButton('downloadData', 'Зберегти в .xlsx')
         ),
 
