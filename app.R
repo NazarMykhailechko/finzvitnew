@@ -60,7 +60,7 @@ ui <- fluidPage(
         sidebarPanel(
           
           textInput("okpo", "Введіть єдрпоу підприємства:",),
-          actionButton("act","Знайти",icon = icon("magnifying-glass")),
+          actionButton("act","Знайти",icon = icon("magnifying-glass", class = "fa-magnifying-glass")),
           downloadButton('downloadData', 'Зберегти в .xlsx')
         ),
 
