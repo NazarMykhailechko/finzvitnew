@@ -66,7 +66,7 @@ ui <- fluidPage(
     )
   ),
   
-  textOutput(" "),
+  div(id = "kp", textOutput("keepAlive")) %>% shinyjs::hidden(),
   
      theme = shinytheme("superhero"),
 
