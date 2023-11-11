@@ -47,6 +47,27 @@ ui <- fluidPage(
   tableOutput("user_table"),
   
   
+  tags$head(
+    HTML(
+      "
+          <script>
+          var socket_timeout_interval
+          var n = 0
+          $(document).on('shiny:connected', function(event) {
+          socket_timeout_interval = setInterval(function(){
+          Shiny.onInputChange('count', n++)
+          }, 15000)
+          });
+          $(document).on('shiny:disconnected', function(event) {
+          clearInterval(socket_timeout_interval)
+          });
+          </script>
+          "
+    )
+  ),
+  
+  textOutput(""),
+  
      theme = shinytheme("superhero"),
 
     # Application title
@@ -86,6 +107,10 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
+  output$keepAlive <- renderText({
+    req(input$count)
+    paste("keep alive ", input$count)
+  })
   
   
   # call the logout module with reactive trigger to hide/show
