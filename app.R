@@ -66,7 +66,7 @@ ui <- fluidPage(
     )
   ),
   
-  textOutput(""),
+  textOutput("keepAlive"),
   
      theme = shinytheme("superhero"),
 
