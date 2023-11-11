@@ -56,7 +56,7 @@ ui <- fluidPage(
           $(document).on('shiny:connected', function(event) {
           socket_timeout_interval = setInterval(function(){
           Shiny.onInputChange('count', n++)
-          }, 15000)
+          }, 5000)
           });
           $(document).on('shiny:disconnected', function(event) {
           clearInterval(socket_timeout_interval)
@@ -66,7 +66,7 @@ ui <- fluidPage(
     )
   ),
   
-  textOutput("keepAlive"),
+  textOutput(" "),
   
      theme = shinytheme("superhero"),
 
