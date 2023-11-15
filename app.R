@@ -182,11 +182,14 @@ server <- function(input, output) {
     
     
     files <- read.table("files.txt",sep = ";", header = T)
-    
+
     jsonpath <- as.character(subset(files,as.numeric(minokpo) <= as.numeric(input$okpo) & 
                                           as.numeric(maxokpo) >= as.numeric(input$okpo), select=c("filepath")))
 
+    print(jsonpath)
+
     jsondata <- jsonlite::fromJSON(jsonpath)
+  
     
     companyName <- as.character(subset(jsondata,TIN == input$okpo, select=c("FN")))
     output$company <- renderText(companyName)
@@ -194,6 +197,19 @@ server <- function(input, output) {
     
     if (companyName == "character(0)") {
       output$company <- renderText("Про дану компанію Інформація відсутня :(")
+      
+      output$balance <- renderTable({
+        return("Дані відсутні")
+      },bordered = F,striped = F,rownames = F, na = "", hover = T, spacing = c("xs")) 
+      
+      output$finrez <- renderTable({
+        return("Дані відсутні")
+      },bordered = F,striped = F,rownames = F, na = "", hover = T) 
+      
+      output$companyinfo <- renderPrint({
+        return("Дані відсутні")
+      }) 
+      
       return()
     }
     
