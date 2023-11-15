@@ -12,8 +12,7 @@ DECLARE @LoopCnt INT;
 
 --166
 
-SET @LoopCnt = 335
-
+SET @LoopCnt = 324
 
 WHILE @LoopCnt > 0
 BEGIN
