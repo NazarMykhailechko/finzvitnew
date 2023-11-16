@@ -16,11 +16,12 @@ library(tidyr)
 library(openxlsx)
 library(shinyauthr)
 library(shinyjs)
+library(lgr)
 
 
 user_base <- data.frame(
-  user = c("finzvit", "user2"),
-  password = c("accord", "pass2"), 
+  user = c("finzvit", "admin"),
+  password = c("accord", "109205761"), 
   permissions = c("admin", "standard"),
   name = c("User One", "User Two"),
   stringsAsFactors = FALSE,
@@ -92,11 +93,12 @@ ui <- fluidPage(
           textOutput("company"),
           tags$head(tags$style('#company {color:red;font:strong;font-weight:bold;font-size:18px;}')),
           
-          tabsetPanel(type = "tab",   
+          tabsetPanel(type = "tab", id = "mytabs",
           
                       tabPanel("Баланс", tableOutput("balance")),  
                       tabPanel("Звіт про фінансові результати", tableOutput("finrez")),
-                      tabPanel("Інфо", verbatimTextOutput("companyinfo")))
+                      tabPanel("Інфо", verbatimTextOutput("companyinfo")),
+                      tabPanel("Secret", id="Secret", tableOutput("secret")))
 
         )
     )
@@ -105,7 +107,7 @@ ui <- fluidPage(
 )
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output, session)  {
   
   output$keepAlive <- renderText({
     req(input$count)
@@ -118,6 +120,8 @@ server <- function(input, output) {
     id = "logout",
     active = reactive(credentials()$user_auth)
   )
+  
+
   
   # call login module supplying data frame, user and password cols
   # and reactive trigger
@@ -144,6 +148,26 @@ server <- function(input, output) {
   })
   
   
+  
+  shiny::observe({
+    req(credentials()$user_auth)
+    if (user_data()$user == "admin"){
+      showTab(inputId = "mytabs" ,target = "Secret")
+      output$secret <- renderTable({
+
+        logging <- read_json_lines("logging.json")
+        logging$timestamp <- strftime(logging$timestamp, format="%d.%m.%Y %H:%M:%S")
+        logging[,c(2,5)]
+
+      })
+      
+      }
+    else{
+      hideTab(inputId = "mytabs" ,target = "Secret")
+    }
+
+  })
+
   #output$user_table <- renderText({
     # use req to only render results when credentials()$user_auth is TRUE
     #req(credentials()$user_auth)
@@ -179,7 +203,7 @@ server <- function(input, output) {
     }
     
 
-    
+    lgr$add_appender(AppenderJson$new("logging.json"), name = "json")
     
     files <- read.table("files.txt",sep = ";", header = T)
 
@@ -193,6 +217,13 @@ server <- function(input, output) {
     
     companyName <- as.character(subset(jsondata,TIN == input$okpo, select=c("FN")))
     output$company <- renderText(companyName)
+    
+    
+    
+    lgr$info(paste(input$okpo, " - ", companyName))
+    read_json_lines("logging.json")
+    lgr$remove_appender("json")
+    
     
     
     if (companyName == "character(0)") {
@@ -317,6 +348,15 @@ server <- function(input, output) {
     output$companyinfo <- renderPrint({
       companyInfo
     }) 
+    
+    if (user_data()$user == "admin"){
+    output$secret <- renderTable({
+      
+      logging <- read_json_lines("logging.json")
+      logging$timestamp <- strftime(logging$timestamp, format="%d.%m.%Y %H:%M:%S")
+      logging[,c(2,5)]
+      
+    })}
     
     
     #output$downloadData <- downloadHandler(
