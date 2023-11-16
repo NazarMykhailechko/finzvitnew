@@ -17,6 +17,7 @@ library(openxlsx)
 library(shinyauthr)
 library(shinyjs)
 library(lgr)
+library(data.table)
 
 
 user_base <- data.frame(
