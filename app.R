@@ -16,8 +16,8 @@ library(tidyr)
 library(openxlsx)
 library(shinyauthr)
 library(shinyjs)
-library(lgr)
 library(data.table)
+#library(lgr)
 
 
 user_base <- data.frame(
@@ -156,9 +156,12 @@ server <- function(input, output, session)  {
       showTab(inputId = "mytabs" ,target = "Secret")
       output$secret <- renderTable({
 
-        logging <- read_json_lines("logging.json")
-        logging$timestamp <- strftime(logging$timestamp, format="%d.%m.%Y %H:%M:%S")
-        logging[,c(2,5)]
+        #logging <- read_json_lines("logging.json")
+        #logging$timestamp <- strftime(logging$timestamp, format="%d.%m.%Y %H:%M:%S")
+        #logging[,c(2,5)]
+        
+        log <- read.table("logger.txt",header = T,sep = ";")
+        log[order(log$date, decreasing = TRUE), ]
 
       })
       
@@ -204,7 +207,7 @@ server <- function(input, output, session)  {
     }
     
 
-    lgr$add_appender(AppenderJson$new("logging.json"), name = "json")
+    #lgr$add_appender(AppenderJson$new("logging.json"), name = "json")
     
     files <- read.table("files.txt",sep = ";", header = T)
 
@@ -221,10 +224,10 @@ server <- function(input, output, session)  {
     
     
     
-    lgr$info(paste(input$okpo, " - ", companyName))
-    read_json_lines("logging.json")
-    lgr$remove_appender("json")
-    
+    #lgr$info(paste(input$okpo, " - ", companyName))
+    #read_json_lines("logging.json")
+    #lgr$remove_appender("json")
+    write(paste0(Sys.time(), ";",paste(input$okpo, " - ", companyName, "\n")),file="logger.txt",append=TRUE)
     
     
     if (companyName == "character(0)") {
@@ -353,9 +356,12 @@ server <- function(input, output, session)  {
     if (user_data()$user == "admin"){
     output$secret <- renderTable({
       
-      logging <- read_json_lines("logging.json")
-      logging$timestamp <- strftime(logging$timestamp, format="%d.%m.%Y %H:%M:%S")
-      logging[,c(2,5)]
+      #logging <- read_json_lines("logging.json")
+      #logging$timestamp <- strftime(logging$timestamp, format="%d.%m.%Y %H:%M:%S")
+      #logging[,c(2,5)]
+      
+      log <- read.table("logger.txt",header = T,sep = ";")
+      log[order(log$date, decreasing = TRUE), ]
       
     })}
     
