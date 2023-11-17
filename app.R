@@ -17,6 +17,7 @@ library(openxlsx)
 library(shinyauthr)
 library(shinyjs)
 library(data.table)
+library(RMySQL)
 #library(lgr)
 
 
@@ -154,14 +155,38 @@ server <- function(input, output, session)  {
     req(credentials()$user_auth)
     if (user_data()$user == "admin"){
       showTab(inputId = "mytabs" ,target = "Secret")
+      
+      options(mysql = list(
+        "host" = "nuepp3ddzwtnggom.chr7pe7iynqr.eu-west-1.rds.amazonaws.com",
+        "port" = 3306,
+        "user" = "ftgqrah1iipvc2dl",
+        "password" = "honjdx189jnetqyi"
+      ))
+      databaseName <- "e2y37zog3x0r8b3l"
+      table <- "logger"
+      
+      db <- dbConnect(MySQL(), dbname = databaseName, host = options()$mysql$host, 
+                      port = options()$mysql$port, user = options()$mysql$user, 
+                      password = options()$mysql$password)
+    
+      
+      # Construct the fetching query
+      query <- sprintf("SELECT * FROM %s order by ts desc", "logger")
+      # Submit the fetch query and disconnect
+      data <- dbGetQuery(db, query)
+      dbDisconnect(db)
+      print(data)
+      
       output$secret <- renderTable({
 
         #logging <- read_json_lines("logging.json")
         #logging$timestamp <- strftime(logging$timestamp, format="%d.%m.%Y %H:%M:%S")
         #logging[,c(2,5)]
         
-        log <- read.table("logger.txt",header = T,sep = ";")
-        log[order(log$date, decreasing = TRUE), ]
+        #log <- read.table("logger.txt",header = T,sep = ";")
+        #log[order(log$date, decreasing = TRUE), ]
+        
+        data
 
       })
       
@@ -227,7 +252,49 @@ server <- function(input, output, session)  {
     #lgr$info(paste(input$okpo, " - ", companyName))
     #read_json_lines("logging.json")
     #lgr$remove_appender("json")
-    write(paste0(Sys.time(), ";",paste(input$okpo, " - ", companyName, "\n")),file="logger.txt",append=TRUE)
+    #write(paste0(Sys.time(), ";",paste(input$okpo, " - ", companyName, "\n")),file="logger.txt",append=TRUE)
+    
+    
+    #DATABASE
+    #----------------------------------------------------------
+    
+    options(mysql = list(
+      "host" = "nuepp3ddzwtnggom.chr7pe7iynqr.eu-west-1.rds.amazonaws.com",
+      "port" = 3306,
+      "user" = "ftgqrah1iipvc2dl",
+      "password" = "honjdx189jnetqyi"
+    ))
+    databaseName <- "e2y37zog3x0r8b3l"
+    table <- "logger"
+    
+    db <- dbConnect(MySQL(), dbname = databaseName, host = options()$mysql$host, 
+                    port = options()$mysql$port, user = options()$mysql$user, 
+                    password = options()$mysql$password)
+    
+    # Connect to the database
+    #db <- dbConnect(MySQL(), dbname = "clientsdb", host = "127.0.0.1", 
+    #               port = 3306, user = "root", 
+    #              password = "WIN72007@NAZAr")
+    
+    
+    # Construct the update query by looping over the data fields
+    query <- sprintf(
+      "INSERT INTO %s (%s, %s) VALUES ('%s', '%s')",
+      table, 
+      paste("okpo", collapse = ", "),
+      paste("name", collapse = "', '"),
+      paste(input$okpo, collapse = "', '"),
+      paste(companyName, collapse = "', '")
+      
+    )
+    
+    print(query)
+    # Submit the update query and disconnect
+    dbGetQuery(db, query)
+    dbDisconnect(db)
+    
+    #----------------------------------------------------------
+    
     
     
     if (companyName == "character(0)") {
@@ -354,14 +421,40 @@ server <- function(input, output, session)  {
     }) 
     
     if (user_data()$user == "admin"){
+      
+      
+      options(mysql = list(
+        "host" = "nuepp3ddzwtnggom.chr7pe7iynqr.eu-west-1.rds.amazonaws.com",
+        "port" = 3306,
+        "user" = "ftgqrah1iipvc2dl",
+        "password" = "honjdx189jnetqyi"
+      ))
+      databaseName <- "e2y37zog3x0r8b3l"
+      table <- "logger"
+      
+      db <- dbConnect(MySQL(), dbname = databaseName, host = options()$mysql$host, 
+                      port = options()$mysql$port, user = options()$mysql$user, 
+                      password = options()$mysql$password)
+      
+      
+      # Construct the fetching query
+      query <- sprintf("SELECT * FROM %s order by ts desc", "logger")
+      # Submit the fetch query and disconnect
+      data <- dbGetQuery(db, query)
+      dbDisconnect(db)
+      print(data)
+      
+      
     output$secret <- renderTable({
       
       #logging <- read_json_lines("logging.json")
       #logging$timestamp <- strftime(logging$timestamp, format="%d.%m.%Y %H:%M:%S")
       #logging[,c(2,5)]
       
-      log <- read.table("logger.txt",header = T,sep = ";")
-      log[order(log$date, decreasing = TRUE), ]
+      #log <- read.table("logger.txt",header = T,sep = ";")
+      #log[order(log$date, decreasing = TRUE), ]
+      
+      data
       
     })}
     
