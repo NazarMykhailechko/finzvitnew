@@ -18,6 +18,7 @@ library(shinyauthr)
 library(shinyjs)
 library(data.table)
 library(RMySQL)
+library(rvest)
 #library(lgr)
 
 
@@ -94,12 +95,15 @@ ui <- fluidPage(
           
           textOutput("company"),
           tags$head(tags$style('#company {color:red;font:strong;font-weight:bold;font-size:18px;}')),
+          tags$body(tags$style('#companyinfo {color:lightgrey;background-color:black;font-size:12px;}')),
+          tags$body(tags$style('#founders {color:lightgrey;background-color:black;font-size:12px;}')),
           
           tabsetPanel(type = "tab", id = "mytabs",
           
                       tabPanel("Баланс", tableOutput("balance")),  
                       tabPanel("Звіт про фінансові результати", tableOutput("finrez")),
                       tabPanel("Інфо", verbatimTextOutput("companyinfo")),
+                      tabPanel("Власники", verbatimTextOutput("founders")),
                       tabPanel("Secret", id="Secret", tableOutput("secret")))
 
         )
@@ -175,7 +179,7 @@ server <- function(input, output, session)  {
       # Submit the fetch query and disconnect
       data <- dbGetQuery(db, query)
       dbDisconnect(db)
-      print(data)
+      #print(data)
       
       output$secret <- renderTable({
 
@@ -288,7 +292,7 @@ server <- function(input, output, session)  {
       
     )
     
-    print(query)
+    #print(query)
     # Submit the update query and disconnect
     dbGetQuery(db, query)
     dbDisconnect(db)
@@ -405,6 +409,61 @@ server <- function(input, output, session)  {
 
     
     
+    
+    #------------------------------------------------------------
+    #Дата оновлення
+    url <- paste0("https://youcontrol.com.ua/catalog/company_details/",input$okpo)
+    starwars <- read_html(url)
+    
+    xmlset <- html_elements(starwars, css = "div #catalog-company-beneficiary div .seo-table-row") %>% html_children()
+    set <- length(html_elements(starwars, css = "div #catalog-company-beneficiary div .seo-table-row") %>% html_children())/2
+    
+    actual_date <- as.character(strsplit(html_elements(starwars, css = "div #catalog-company-beneficiary .seo-table-date.date-actual-table span") %>% html_text2(),"\n"))
+    
+    #Засновники
+    list <- strsplit(html_elements(starwars, css = "div #catalog-company-beneficiary div .seo-table-row") %>% html_text2(),"\n")
+    
+    indxf <- 0
+    for (i in 1:length(xmlset)) {if(grepl("Перелік засновників", xmlset[i])){ indxf <- i}}
+    
+    if(indxf != 0){
+      melted_list <- as.data.frame(melt(list[(indxf+1)/2])[,1])
+      
+      founders <- as.data.frame(melted_list[!apply(melted_list == "", 1, all), ])
+      colnames(founders)[1] ="founders"
+      founders <- filter(founders, founders!= "Всі Засновники Приховати")
+      if (length(founders) == 0){
+        founders <- "не має даних"
+      }else{
+        founders <- founders[-1,]
+      }
+    }else{
+      founders <- "не має даних"
+    }
+    
+    
+    #Бенефіціари
+    
+    indxb <- 0
+    for (i in 1:length(xmlset)) {if(grepl("бенефіціарн", xmlset[i])){ indxb <- i}}
+    if(indxb != 0){
+      list <- strsplit(html_elements(starwars, css = "div #catalog-company-beneficiary div .seo-table-row") %>% html_text2(),"\n")
+      melted_list <- as.data.frame(melt(list[(indxb+1)/2])[,1])
+      beneficiaries <- as.data.frame(melted_list[!apply(melted_list == "", 1, all), ])
+      colnames(beneficiaries)[1] ="beneficiaries"
+      if (length(beneficiaries[-1,]) == 0){
+        beneficiaries <- "не має даних"
+      }else{
+        beneficiaries <- beneficiaries[-1,]
+      }
+    }else{
+      beneficiaries <- "не має даних"
+    }
+    
+    #------------------------------------------------------------
+    
+    
+    
     #finrez[is.na(finrez)] <- 0
     #38324809
     
@@ -418,6 +477,17 @@ server <- function(input, output, session)  {
     
     output$companyinfo <- renderPrint({
       companyInfo
+    })
+    
+    output$founders <- renderPrint({
+      print(actual_date)
+      cat("\n")
+      print("-----------------------Засновники--------------------------")
+      print(founders)
+      cat("\n")
+      print("-----------------------Бенефіціари-------------------------")
+      print(beneficiaries)
+      cat("\n")
     }) 
     
     if (user_data()$user == "admin"){
@@ -442,7 +512,7 @@ server <- function(input, output, session)  {
       # Submit the fetch query and disconnect
       data <- dbGetQuery(db, query)
       dbDisconnect(db)
-      print(data)
+      #print(data)
       
       
     output$secret <- renderTable({
@@ -468,7 +538,7 @@ server <- function(input, output, session)  {
     
     output$downloadData <- downloadHandler(
       
-      filename = function() {paste0(companyName, ".xlsx")},
+      filename = function() {paste0(input$okpo,"-",companyName, ".xlsx")},
       content = function(file) {
 
          
@@ -482,6 +552,12 @@ server <- function(input, output, session)  {
          addWorksheet(wb, "CompanyInfo")
          writeData(wb, "CompanyInfo", companyInfo, rowNames = TRUE)
          setColWidths(wb, "CompanyInfo", cols = c(1, 2), widths = c("auto", "auto"))
+         addWorksheet(wb, "Founders")
+         writeData(wb, "Founders", founders, rowNames = TRUE)
+         setColWidths(wb, "Founders", cols = c(1, 2), widths = c("auto", "auto"))
+         addWorksheet(wb, "Beneficiaries")
+         writeData(wb, "Beneficiaries", beneficiaries, rowNames = TRUE)
+         setColWidths(wb, "Beneficiaries", cols = c(1, 2), widths = c("auto", "auto"))
          saveWorkbook(wb, file, overwrite = TRUE)
         
         
