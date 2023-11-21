@@ -19,6 +19,7 @@ library(shinyjs)
 library(data.table)
 library(RMySQL)
 library(rvest)
+library(polite)
 #library(lgr)
 
 
@@ -413,7 +414,9 @@ server <- function(input, output, session)  {
     #------------------------------------------------------------
     #Дата оновлення
     url <- paste0("https://youcontrol.com.ua/catalog/company_details/",input$okpo)
-    starwars <- read_html(url)
+    #starwars <- read_html(url)
+    starwars <- url %>% bow() %>% scrape()
+    
     
     xmlset <- html_elements(starwars, css = "div #catalog-company-beneficiary div .seo-table-row") %>% html_children()
     set <- length(html_elements(starwars, css = "div #catalog-company-beneficiary div .seo-table-row") %>% html_children())/2
