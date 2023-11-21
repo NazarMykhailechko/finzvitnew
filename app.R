@@ -347,7 +347,7 @@ server <- function(input, output, session)  {
     res[res == ''] <- 0
     res[is.na(res)] <- 0
 
-    res_melted <- melt(res, id=c("999"))
+    res_melted <- reshape2::melt(res, id=c("999"))
     res_melted[is.na(res_melted)] <- 0
     
     
@@ -361,7 +361,7 @@ server <- function(input, output, session)  {
 
     
     
-    finzvit <- dcast(res_melted, 999 + ROW ~ YEAR, value.var = "value",fun.aggregate = sum)
+    finzvit <- reshape2::dcast(res_melted, 999 + ROW ~ YEAR, value.var = "value",fun.aggregate = sum)
     
     
     balance_aricles <- read.csv("BALANCE_ARTICLES.txt", sep = ";", header = T, encoding = '1251')
@@ -438,7 +438,7 @@ server <- function(input, output, session)  {
     for (i in 1:length(xmlset)) {if(grepl("Перелік засновників", xmlset[i])){ indxf <- i}}
     
     if(indxf != 0){
-      melted_list <- as.data.frame(melt(list[(indxf+1)/2])[,1])
+      melted_list <- as.data.frame(reshape2::melt(list[(indxf+1)/2])[,1])
       
       founders <- as.data.frame(melted_list[!apply(melted_list == "", 1, all), ])
       colnames(founders)[1] ="founders"
@@ -459,7 +459,7 @@ server <- function(input, output, session)  {
     for (i in 1:length(xmlset)) {if(grepl("бенефіціарн", xmlset[i])){ indxb <- i}}
     if(indxb != 0){
       list <- strsplit(html_elements(starwars, css = "div #catalog-company-beneficiary div .seo-table-row") %>% html_text2(),"\n")
-      melted_list <- as.data.frame(melt(list[(indxb+1)/2])[,1])
+      melted_list <- as.data.frame(reshape2::melt(list[(indxb+1)/2])[,1])
       beneficiaries <- as.data.frame(melted_list[!apply(melted_list == "", 1, all), ])
       colnames(beneficiaries)[1] ="beneficiaries"
       if (length(beneficiaries[-1,]) == 0){
