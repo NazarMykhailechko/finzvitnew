@@ -100,7 +100,7 @@ ui <- fluidPage(
           textOutput("company"),
           tags$head(tags$style('#company {color:red;font:strong;font-weight:bold;font-size:18px;}')),
           tags$body(tags$style('#companyinfo {color:lightgrey;background-color:black;font-size:12px;}')),
-          tags$body(tags$style('#founders {color:lightgrey;background-color:black;font-size:12px;}')),
+          #tags$body(tags$style('#founders {color:lightgrey;background-color:black;font-size:12px;}')),
           
           
           
@@ -109,7 +109,7 @@ ui <- fluidPage(
                       tabPanel("Баланс", tableOutput("balance")),  
                       tabPanel("Звіт про фінансові результати", tableOutput("finrez")),
                       tabPanel("Інфо", verbatimTextOutput("companyinfo")),
-                      tabPanel("Власники", verbatimTextOutput("founders")),
+                      tabPanel("Власники", tableOutput("founders")),
                       tabPanel("Secret", id="Secret", tableOutput("secret")))
 
         )
@@ -525,8 +525,9 @@ server <- function(input, output, session)  {
       companyInfo
     })
     
-    output$founders <- renderPrint({
-      print(founders, row.names=FALSE)
+    output$founders <- renderTable({
+      #print(founders, row.names=FALSE)
+      founders
       #print(actual_date)
       #actual_date
       #cat("\n")
