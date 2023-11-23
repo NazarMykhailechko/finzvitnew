@@ -100,7 +100,7 @@ ui <- fluidPage(
           textOutput("company"),
           tags$head(tags$style('#company {color:red;font:strong;font-weight:bold;font-size:18px;}')),
           tags$body(tags$style('#companyinfo {color:lightgrey;background-color:black;font-size:12px;}')),
-          tags$table(tags$style('#founders {color:lightgrey;background-color:black;font-size:11px;}')),
+          tags$body(tags$style('#founders {color:lightgrey;background-color:black;font-size:12px;}')),
           
           
           
@@ -526,7 +526,7 @@ server <- function(input, output, session)  {
     })
     
     output$founders <- renderPrint({
-      founders
+      print(founders, row.names=FALSE)
       #print(actual_date)
       #actual_date
       #cat("\n")
