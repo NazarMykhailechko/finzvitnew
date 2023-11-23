@@ -528,7 +528,7 @@ server <- function(input, output, session)  {
     })
     
     output$founders <- renderPrint({
-      print(founders, row.names = FALSE)
+      founders
       #print(actual_date)
       #actual_date
       #cat("\n")
