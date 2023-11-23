@@ -18,8 +18,10 @@ library(shinyauthr)
 library(shinyjs)
 library(data.table)
 library(RMySQL)
-library(rvest)
-library(httr)
+#library(rvest)
+#library(httr)
+#library(curl)
+#library(RSelenium)
 #library(polite)
 #library(lgr)
 
@@ -98,14 +100,18 @@ ui <- fluidPage(
           textOutput("company"),
           tags$head(tags$style('#company {color:red;font:strong;font-weight:bold;font-size:18px;}')),
           tags$body(tags$style('#companyinfo {color:lightgrey;background-color:black;font-size:12px;}')),
-          tags$body(tags$style('#founders {color:lightgrey;background-color:black;font-size:12px;}')),
+          tags$body(tags$style('.table.shiny-table.table-.spacing-s {color:lightgrey;background-color:black;font-size:12px;}')),
+          #tags$table(tags$style('.table.shiny-table.table-.spacing-s {color:lightgrey;background-color:black;font-size:10px;}')),
+          tags$table(tags$style('#founders {color:lightgrey;background-color:black;font-size:12px;}')),
+          
+          
           
           tabsetPanel(type = "tab", id = "mytabs",
           
                       tabPanel("Баланс", tableOutput("balance")),  
                       tabPanel("Звіт про фінансові результати", tableOutput("finrez")),
                       tabPanel("Інфо", verbatimTextOutput("companyinfo")),
-                      #tabPanel("Власники", verbatimTextOutput("founders")),
+                      tabPanel("Власники", verbatimTextOutput("founders")),
                       tabPanel("Secret", id="Secret", tableOutput("secret")))
 
         )
@@ -241,14 +247,20 @@ server <- function(input, output, session)  {
     #lgr$add_appender(AppenderJson$new("logging.json"), name = "json")
     
     files <- read.table("files.txt",sep = ";", header = T)
+    UOfiles <- read.table("UOfiles.txt",sep = ";", header = T)
 
     jsonpath <- as.character(subset(files,as.numeric(minokpo) <= as.numeric(input$okpo) & 
                                           as.numeric(maxokpo) >= as.numeric(input$okpo), select=c("filepath")))
 
+    UOjsonpath <- as.character(subset(UOfiles,as.numeric(minokpo) <= as.numeric(input$okpo) & 
+                                      as.numeric(maxokpo) >= as.numeric(input$okpo), select=c("filepath")))    
+    
     print(jsonpath)
+    print(UOjsonpath)
 
     jsondata <- jsonlite::fromJSON(jsonpath)
-  
+    UOjsondata <- jsonlite::fromJSON(UOjsonpath)
+
     
     companyName <- as.character(subset(jsondata,TIN == input$okpo, select=c("FN")))
     output$company <- renderText(companyName)
@@ -324,7 +336,6 @@ server <- function(input, output, session)  {
     print(companyName)
     
     companyInfo <- subset(jsondata,TIN == input$okpo, select=c("A","K","R","T","S"))
-  
     
     names(companyInfo)[1] <- "Адреса"
     names(companyInfo)[2] <- "КВЕД"
@@ -339,6 +350,21 @@ server <- function(input, output, session)  {
     names(companyInfo)[0] <- ""
     names(companyInfo)[1] <- ""
     
+    
+    founders <- UOjsondata[UOjsondata$TIN == input$okpo,]
+
+    if (nrow(founders) == 0){
+      founders <- "Не має даних"
+    }else{
+      founders<-founders[[2]][[1]]
+      
+      names(founders)[1] <- ""
+      names(founders)[2] <- ""
+      names(founders)[3] <- ""
+      founders <- format(founders, justify = "left")
+    }
+    
+
     
     res <- jsondata[jsondata$TIN == input$okpo,]
     res<-res[[8]][[1]]
@@ -417,20 +443,31 @@ server <- function(input, output, session)  {
     #url <- paste0("https://youcontrol.com.ua/catalog/company_details/",input$okpo)
     #starwars <- read_html(url)
     #starwars <- url %>% bow() %>% scrape()
+    #con <- curl(url)
+    #rrrr<-readLines(con)
+    #print(rrrr)
     
     #headers = c(
-    #  `user-agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.61 Safari/537.36'
+     # `user-agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.61 Safari/537.36'
     #)
     
-    #res <- httr::GET(url = url, httr::add_headers(.headers=headers))
-    #starwars <- content(res)
+    #headers = c(
+    #  `user-agent` = 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'
+    #)
+    #uastring <- "mozilla/5.0 (macintosh; intel mac os x 10_11_6) applewebkit/537.36 (khtml, like gecko) chrome/54.0.2840.71 safari/537.36"
+    #pgsession <- session("https://youcontrol.com.ua/catalog/company_details/22467327/", user_agent(uastring))
+    #print(pgsession)
     
+    #res1 <- httr::GET(url = "https://clarity-project.info/edr/39443735", httr::add_headers(headers))
+    #print(content(res1))
+    
+    #res <- httr::GET(url = url, httr::add_headers(headers))
+    #starwars <- content(res)
+
     
     #xmlset <- html_elements(starwars, css = "div #catalog-company-beneficiary div .seo-table-row") %>% html_children()
     #set <- length(html_elements(starwars, css = "div #catalog-company-beneficiary div .seo-table-row") %>% html_children())/2
-    
     #actual_date <- as.character(strsplit(html_elements(starwars, css = "div #catalog-company-beneficiary .seo-table-date.date-actual-table span") %>% html_text2(),"\n"))
-    
     #Засновники
     #list <- strsplit(html_elements(starwars, css = "div #catalog-company-beneficiary div .seo-table-row") %>% html_text2(),"\n")
     
@@ -438,16 +475,16 @@ server <- function(input, output, session)  {
     #for (i in 1:length(xmlset)) {if(grepl("Перелік засновників", xmlset[i])){ indxf <- i}}
     
     #if(indxf != 0){
-     # melted_list <- as.data.frame(reshape2::melt(list[(indxf+1)/2])[,1])
+      #melted_list <- as.data.frame(reshape2::melt(list[(indxf+1)/2])[,1])
       
-    #  founders <- as.data.frame(melted_list[!apply(melted_list == "", 1, all), ])
-    #  colnames(founders)[1] ="founders"
-    #  founders <- filter(founders, founders!= "Всі Засновники Приховати")
-    #  if (length(founders) == 0){
-    #    founders <- "не має даних"
-    #  }else{
-    #    founders <- founders[-1,]
-    #  }
+      #founders <- as.data.frame(melted_list[!apply(melted_list == "", 1, all), ])
+      #colnames(founders)[1] ="founders"
+      #founders <- filter(founders, founders!= "Всі Засновники Приховати")
+      #if (length(founders) == 0){
+       # founders <- "не має даних"
+      #}else{
+       # founders <- founders[-1,]
+      #}
     #}else{
     #  founders <- "не має даних"
     #}
@@ -458,7 +495,7 @@ server <- function(input, output, session)  {
     #indxb <- 0
     #for (i in 1:length(xmlset)) {if(grepl("бенефіціарн", xmlset[i])){ indxb <- i}}
     #if(indxb != 0){
-    #  list <- strsplit(html_elements(starwars, css = "div #catalog-company-beneficiary div .seo-table-row") %>% html_text2(),"\n")
+     # list <- strsplit(html_elements(starwars, css = "div #catalog-company-beneficiary div .seo-table-row") %>% html_text2(),"\n")
     #  melted_list <- as.data.frame(reshape2::melt(list[(indxb+1)/2])[,1])
     #  beneficiaries <- as.data.frame(melted_list[!apply(melted_list == "", 1, all), ])
     #  colnames(beneficiaries)[1] ="beneficiaries"
@@ -468,7 +505,7 @@ server <- function(input, output, session)  {
     #    beneficiaries <- beneficiaries[-1,]
     #  }
     #}else{
-    #  beneficiaries <- "не має даних"
+    #    beneficiaries <- "не має даних"
     #}
     
     #------------------------------------------------------------
@@ -490,16 +527,20 @@ server <- function(input, output, session)  {
       companyInfo
     })
     
-    #output$founders <- renderPrint({
+    output$founders <- renderPrint({
+      print(founders, row.names = FALSE)
       #print(actual_date)
+      #actual_date
       #cat("\n")
-    #  print("-----------------------Засновники--------------------------")
-    #  print(founders)
-    #  cat("\n")
-    #  print("-----------------------Бенефіціари-------------------------")
-    #  print(beneficiaries)
-    #  cat("\n")
-    #}) 
+      #print(content(res1))
+      #cat("\n")
+      #print("-----------------------Засновники--------------------------")
+      #print(founders)
+      #cat("\n")
+      #print("-----------------------Бенефіціари-------------------------")
+      #print(beneficiaries)
+      #cat("\n")
+    }) 
     
     if (user_data()$user == "admin"){
       
@@ -563,9 +604,9 @@ server <- function(input, output, session)  {
          addWorksheet(wb, "CompanyInfo")
          writeData(wb, "CompanyInfo", companyInfo, rowNames = TRUE)
          setColWidths(wb, "CompanyInfo", cols = c(1, 2), widths = c("auto", "auto"))
-         #addWorksheet(wb, "Founders")
-         #writeData(wb, "Founders", founders, rowNames = TRUE)
-         #setColWidths(wb, "Founders", cols = c(1, 2), widths = c("auto", "auto"))
+         addWorksheet(wb, "Founders")
+         writeData(wb, "Founders", founders, rowNames = TRUE)
+         setColWidths(wb, "Founders", cols = c(1, 2), widths = c("auto", "auto"))
          #addWorksheet(wb, "Beneficiaries")
          #writeData(wb, "Beneficiaries", beneficiaries, rowNames = TRUE)
          #setColWidths(wb, "Beneficiaries", cols = c(1, 2), widths = c("auto", "auto"))
