@@ -100,9 +100,7 @@ ui <- fluidPage(
           textOutput("company"),
           tags$head(tags$style('#company {color:red;font:strong;font-weight:bold;font-size:18px;}')),
           tags$body(tags$style('#companyinfo {color:lightgrey;background-color:black;font-size:12px;}')),
-          tags$body(tags$style('.table.shiny-table.table-.spacing-s {color:lightgrey;background-color:black;font-size:11px;}')),
-          #tags$table(tags$style('.table.shiny-table.table-.spacing-s {color:lightgrey;background-color:black;font-size:10px;}')),
-          #tags$table(tags$style('#founders {color:lightgrey;background-color:black;font-size:12px;}')),
+          tags$table(tags$style('#founders {color:lightgrey;background-color:black;font-size:11px;}')),
           
           
           
