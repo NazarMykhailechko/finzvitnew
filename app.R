@@ -8,6 +8,7 @@
 #
 
 library(shiny)
+library(shinyBS)
 library(shinythemes)
 library(jsonlite)
 library(reshape2)
@@ -18,8 +19,11 @@ library(shinyauthr)
 library(shinyjs)
 library(data.table)
 library(RMySQL)
+library(XML)
+library(xml2)
 #library(rvest)
 #library(httr)
+#library(downloader)
 #library(curl)
 #library(RSelenium)
 #library(polite)
@@ -90,7 +94,8 @@ ui <- fluidPage(
           
           textInput("okpo", "Введіть єдрпоу підприємства:",),
           actionButton("act","Знайти",icon = icon("search", class = "normal")),
-          downloadButton('downloadData', 'Зберегти в .xlsx')
+          downloadButton('downloadData', 'Зберегти в .xlsx'),
+          actionButton("search","Пошук на Smida",icon = icon("business-time", class = "normal")),
         ),
 
         # Show a plot of the generated distribution
@@ -100,9 +105,22 @@ ui <- fluidPage(
           textOutput("company"),
           tags$head(tags$style('#company {color:red;font:strong;font-weight:bold;font-size:18px;}')),
           tags$body(tags$style('#companyinfo {color:lightgrey;background-color:black;font-size:12px;}')),
-          #tags$body(tags$style('#founders {color:lightgrey;background-color:black;font-size:12px;}')),
+          tags$body(tags$style('#distTable {color:lightgrey;background-color:black;font-size:12px;}')),
+          tags$body(tags$style('#companyinfo1 {color:lime;background-color:black;font-size:12px;}')),
+          tags$style(type="text/css", "#companyinfo2 {color:lightgrey;background-color:black;font-size:12px;white-space: pre-wrap;}"),
+          tags$style(type="text/css", "#manrep {color:lightgrey;background-color:black;font-size:12px;white-space: pre-wrap;}"),
           
-          
+          bsModal("modalExample",title = div("Smida", icon("search",class = "fa-beat")), "search", size = "large", verbatimTextOutput("companyinfo1"),
+                  
+                  tabsetPanel(type = "tab", id = "mytabs2",
+                              
+                              tabPanel("Баланс", tableOutput("balance2")),  
+                              tabPanel("Звіт про фінансові результати", tableOutput("finrez2")),
+                              tabPanel("Інфо", verbatimTextOutput("companyinfo2")),
+                              tabPanel("Упр.звіт", verbatimTextOutput("manrep")),
+                              tabPanel("Власники", tableOutput("founders2"))),
+                  
+                  tableOutput("distTable")),
           
           tabsetPanel(type = "tab", id = "mytabs",
           
@@ -435,7 +453,6 @@ server <- function(input, output, session)  {
 
     
     
-    
     #------------------------------------------------------------
     #Дата оновлення
     #url <- paste0("https://youcontrol.com.ua/catalog/company_details/",input$okpo)
@@ -541,6 +558,9 @@ server <- function(input, output, session)  {
       #cat("\n")
     }) 
     
+    
+    
+    
     if (user_data()$user == "admin"){
       
       
@@ -616,7 +636,303 @@ server <- function(input, output, session)  {
       
     )
     
+    
   })
+  
+  #
+  #
+  #
+  #
+  #
+  #
+  #
+  #
+  #
+  #
+  #
+  
+  
+  hrefV <- reactiveValues(href = "")
+  doneV <- reactiveValues(done = "")
+  finzvitV<- reactiveValues(data = data.frame())
+  balanceV<- reactiveValues(data = data.frame())
+  finrezV<- reactiveValues(data = data.frame())
+  smida_ownersV<- reactiveValues(data = data.frame())
+  smida_infoV <- reactiveValues(data = data.frame())
+  smida_manrepV <- reactiveValues(data = data.frame())
+  
+  output$companyinfo1 <- renderPrint({
+    doneV$done
+  })
+  
+  observeEvent(input$search,{
+    
+    finzvit.final = data.frame()
+    smida_owners <- data.frame()
+    smida_ownersV$data <- data.frame()
+    smida_info <- data.frame()
+    smida_manrep <- data.frame()
+    
+    smida_infoV$data <- data.frame()
+    smida_manrepV$data <- data.frame()
+    finzvitV$data <- data.frame()
+    balanceV$data <- data.frame()
+    finrezV$data <- data.frame()
+    doneV$data <- ""
+    
+    curryear <- format(Sys.Date(), "%Y")
+    prevyear <- as.numeric(format(Sys.Date(), "%Y")) -1
+    
+    dateMax <- paste0(curryear, "-12-31")
+    dateMin <- paste0(prevyear, "-12-31")
+    
+    #smidaurl <- paste0("https://smida.gov.ua/db/api/v1/feed-index.xml?edrpou=", input$okpo, "&date=2022-12-31,2023-12-31")
+    smidaurl <- paste0("https://smida.gov.ua/db/api/v1/feed-index.xml?edrpou=", input$okpo, "&date=", dateMin, ",",dateMax)
+    print(smidaurl)
+    
+    shinyjs::html(id = "companyinfo1", "Йде пошук звітності")
+    
+    if(as.character(class(try(read_xml(smidaurl))))[1] != "try-error"){
+      
+      web <- read_xml(smidaurl)
+      
+      num <- length(xml_children(web))
+      num <- num - 1
+      for(i in 1:num){
+        {
+          #href <- hrefV$href
+          hrefV$href <- xml_attrs(xml_children(web)[[i+1]])[["href"]]
+          #hrefV$href <- href
+          
+          if (grepl("report.xml", hrefV$href)){
+            
+            doc <- read_xml(hrefV$href)
+          
+            
+            if (length(xml_find_all(doc, ".//*[name()='z:Fin-general']"))!=0){
+              print(hrefV$href)
+              shinyjs::html(id = "companyinfo1", paste("Йде пошук звітності", substring(hrefV$href,21)))
+              
+              report_date <- substring(xml_attrs(xml_children(xml_parent(doc)))[[1]][["FID"]],1,10)
+              report_date <- as.Date(report_date, "%Y-%m-%d")
+              report_date <- format(report_date, "%d.%m.%Y")
+              
+              ###Інфо################
+              
+              if(length(xml_find_all(doc, ".//*[name()='z:DTSBUS_TEXT']")) > 0){
+              info <- as.data.frame(xml_attrs(xml_children(xml_find_all(doc, ".//*[name()='z:DTSBUS_TEXT']"))))
+              info <- cbind(report_date,info)
+              names(info)[1] <- "DATE"
+              names(info)[2] <- "INFO"
+              #names(info)[1] <- paste("Станом на", report_date)
+              #info[,1] <- gsub('ризик','<mark>ризик</mark>',info[,1])
+              #rownames(info) <- NULL
+              #info <- format(info, justify = "left")
+              smida_info <- rbind(info, smida_info)
+              
+              }
+              
+              ###########################
+              
+              ###Упр.звіт################
+              
+              if(length(xml_find_all(doc, ".//*[name()='z:DTSMANREPA']")) > 0){
+                manrep <- as.data.frame(xml_attrs(xml_children(xml_find_all(doc, ".//*[name()='z:DTSMANREPA']"))))
+                manrep <- cbind(report_date,manrep)
+                names(manrep)[1] <- "DATE"
+                names(manrep)[2] <- "INFO"
+                #names(info)[1] <- paste("Станом на", report_date)
+                #info[,1] <- gsub('ризик','<mark>ризик</mark>',info[,1])
+                #rownames(info) <- NULL
+                #info <- format(info, justify = "left")
+                smida_manrep <- rbind(manrep, smida_manrep)
+                
+              }
+              
+              ###########################
+              
+              ###Власники################
+              
+              if(length(xml_find_all(doc, ".//*[name()='z:DTSCORP_SPO']")) > 0){
+                
+                report_date <- substring(xml_attrs(xml_children(xml_parent(doc)))[[1]][["FID"]],1,10)
+                report_date <- as.Date(report_date, "%Y-%m-%d")
+                report_date <- format(report_date, "%d.%m.%Y")
+                
+              df_name <- data.frame()
+              
+              
+              for (i in 1:length(xml_attrs(xml_children(xml_find_all(doc, ".//*[name()='z:DTSCORP_SPO']"))))){
+                df_name <- rbind(df_name,xml_attrs(xml_children(xml_find_all(doc, ".//*[name()='z:DTSCORP_SPO']")))[[i]][["O_NAME"]])
+              }
+              df_name <- format(df_name, justify = "left")
+              
+              df_vl_stat <- data.frame()
+              for (i in 1:length(xml_attrs(xml_children(xml_find_all(doc, ".//*[name()='z:DTSCORP_SPO']"))))){
+                df_vl_stat <- rbind(df_vl_stat,xml_attrs(xml_children(xml_find_all(doc, ".//*[name()='z:DTSCORP_SPO']")))[[i]][["VL_STAT"]])
+              }
+              df_vl_stat <- format(df_vl_stat, justify = "right")
+              
+              owners <- cbind(report_date,df_name,df_vl_stat)
+              
+              names(owners)[1] <- "Дата"
+              names(owners)[2] <- "Власник"
+              names(owners)[3] <- "%"
+              
+              smida_owners <- rbind(owners, smida_owners)
+              smida_owners <- smida_owners[order(smida_owners$Дата,smida_owners$'%', decreasing = TRUE), ]
+
+              }
+              
+              ###########################
+              
+              
+              if (nchar(as.character(xml_find_all(xml_find_all(doc, ".//*[name()='z:Fin-general']"), ".//*[name()='z:DTSBP73_A']"))) > 100){
+                balact <- as.data.frame(xml_attrs(xml_child(xml_find_all(xml_find_all(doc, ".//*[name()='z:Fin-general']"), ".//*[name()='z:DTSBP73_A']"))))
+                balpass <- as.data.frame(xml_attrs(xml_child(xml_find_all(xml_find_all(doc, ".//*[name()='z:Fin-general']"), ".//*[name()='z:DTSBP73_P']"))))
+                finrez <- as.data.frame(xml_attrs(xml_child(xml_find_all(xml_find_all(doc, ".//*[name()='z:Fin-general']"), ".//*[name()='z:DTSFP73']"))))
+                
+                
+                balact <- cbind(rownames(balact), data.frame(balact, row.names=NULL))  
+                balpass <- cbind(rownames(balpass), data.frame(balpass, row.names=NULL))  
+                finrez <- cbind(rownames(finrez), data.frame(finrez, row.names=NULL))  
+                
+                names(balact)[1] <- "ROW"
+                names(balact)[2] <- "SUMM"
+                names(balpass)[1] <- "ROW"
+                names(balpass)[2] <- "SUMM"
+                names(finrez)[1] <- "ROW"
+                names(finrez)[2] <- "SUMM"
+                
+                bal <- rbind(balact,balpass)
+                bal %>% filter(ROW %like% '_04') -> bal
+                finrez %>% filter(ROW %like% '_03') -> finrez
+                
+                bal <- rbind(bal,finrez)
+                date <- substr(xml_attrs(xml_child(xml_find_all(xml_find_all(doc, ".//*[name()='z:Fin-general']"), ".//*[name()='z:DTSBP73_A']")))[["DATE"]],1,10)
+                #date <- as.Date(date, "%Y-%m-%d")
+                #date <- format(date, "%d.%m.%Y") 
+                
+                finzvit <- cbind(bal,date)
+                finzvit.final <- rbind(finzvit.final, finzvit)
+                finzvit
+                
+              }}}
+          
+          
+        }}}
+    
+    
+    if (length(finzvit.final)!=0){
+      mutate(finzvit.final, SUMM = as.numeric(gsub(",", ".", gsub("\\.", "", SUMM)))) -> finzvit.final
+      finzvit <- reshape2::dcast(finzvit.final, ROW ~ date, value.var = "SUMM",fun.aggregate = sum)
+      mutate(finzvit, ROW = substring(ROW,3,6)) -> finzvit
+      finzvit<-finzvit[,order(colnames(finzvit),decreasing=TRUE)]
+      
+      balance_aricles <- read.csv("BALANCE_ARTICLES.txt", sep = ";", header = T, encoding = '1251')
+      finrez_aricles <- read.csv("FINREZ_ARTICLES.txt", sep = ";", header = T, encoding = '1251')
+      
+      balance <-merge(balance_aricles, finzvit, all.x=TRUE)
+      balance <- balance[order(balance$id, decreasing = FALSE), ]
+      balance <- balance %>% relocate(ROW, .after = ARTICLE)
+      
+      names(balance)[2] <- "Стаття"
+      names(balance)[3] <- "Код рядка"
+      
+      finrez <-merge(finrez_aricles, finzvit, all.x=TRUE)
+      finrez <- finrez[order(finrez$id, decreasing = FALSE), ]
+      finrez <- finrez %>% relocate(ROW, .after = ARTICLE)
+      
+      names(finrez)[2] <- "Стаття"
+      names(finrez)[3] <- "Код рядка"
+      
+      #View(balance)
+      #View(finrez)
+      
+      #finzvitV$data <- rbind(balance, finrez)
+      balanceV$data <- balance
+      finrezV$data <- finrez
+      
+      if (length(smida_owners) > 0){
+      smida_ownersV$data <- smida_owners
+      }else{
+        smida_ownersV$data <- "Не має даних"
+      }
+      
+      if (length(smida_info) > 0){
+      
+      smida_info <- subset(smida_info, smida_info$DATE == max(smida_info$DATE))
+      names(smida_info)[2] <- paste("Станом на", smida_info$DATE[1])
+      smida_info <- smida_info[-1]
+      rownames(smida_info) <- NULL
+      smida_info <- format(smida_info, justify = "left")
+      smida_infoV$data <- smida_info
+      
+      }else{
+        smida_infoV$data <- "Не має даних"
+      }
+      
+      if (length(smida_manrep) > 0){
+      smida_manrep <- subset(smida_manrep, smida_manrep$DATE == max(smida_manrep$DATE))
+      names(smida_manrep)[2] <- paste("Станом на", smida_manrep$DATE[1])
+      smida_manrep <- smida_manrep[-1]
+      rownames(smida_manrep) <- NULL
+      smida_manrep <- format(smida_manrep, justify = "left")
+      smida_manrepV$data <- smida_manrep
+      }else{
+        smida_manrepV$data  <- "Не має даних"
+      }
+      
+      done <- doneV$done
+      done <- "Пошук завершено!"
+      doneV$done <- done
+      shinyjs::html(id = "companyinfo1", doneV$done)
+      
+    }else{
+      print("не має даних")
+      doneV$done <- "не має даних"
+      shinyjs::html(id = "companyinfo1", doneV$done)
+    }
+    
+  })
+  
+  
+  output$balance2 <- renderTable({
+    balanceV$data
+  })
+  
+  output$finrez2 <- renderTable({
+    finrezV$data
+  })
+  
+  output$founders2 <- renderTable({
+    smida_ownersV$data
+  })
+  
+  output$companyinfo2<- renderPrint({
+    smida_infoV$data
+  })
+  
+  output$manrep<- renderPrint({
+    smida_manrepV$data
+  })
+  
+  output$distTable <- renderTable({
+    finzvitV$data
+  })
+  
+  #
+  #
+  #
+  #
+  #
+  #
+  #
+  #
+  #
+  #
+  #
+  
 }
 
 # Run the application 
