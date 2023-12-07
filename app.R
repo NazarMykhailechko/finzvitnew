@@ -21,6 +21,7 @@ library(data.table)
 library(RMySQL)
 library(XML)
 library(xml2)
+#library(tableHTML)
 #library(rvest)
 #library(httr)
 #library(downloader)
@@ -28,6 +29,7 @@ library(xml2)
 #library(RSelenium)
 #library(polite)
 #library(lgr)
+
 
 
 user_base <- data.frame(
@@ -48,16 +50,111 @@ ui <- fluidPage(
   div(class = "pull-right", logoutUI(id = "logout", label="Вийти", 
                                      icon = icon("angle-right",
                                      class = "normal"))),
+  
   # add login panel UI function
-  loginUI(id = "login", title = "Вхід до системи", 
+  div(id = "loginpage", loginUI(id = "login", title = "Вхід до системи", 
                         user_title = "Логін",
                         pass_title = "Пароль",
                         error_message = "Невірний логін або пароль!",
-                        login_title = "Увійти"),
+                        login_title = "Увійти")),
   
   # setup table output to show user info after login
   tableOutput("user_table"),
   
+  tags$head(
+    # Note the wrapping of the string in HTML()
+    tags$style(HTML("@import url('https://fonts.googleapis.com/css?family=Source+Code+Pro:200');
+
+body  {
+    background-image: url('https://w0.peakpx.com/wallpaper/738/166/HD-wallpaper-blue-digital-background-technology-digital-technology-coding-concepts-blue-technology-background.jpg');
+  background-size:cover;
+        -webkit-animation: slidein 100s;
+        animation: slidein 100s;
+
+        -webkit-animation-fill-mode: forwards;
+        animation-fill-mode: forwards;
+
+        -webkit-animation-iteration-count: infinite;
+        animation-iteration-count: infinite;
+
+        -webkit-animation-direction: alternate;
+        animation-direction: alternate;              
+}
+
+@-webkit-keyframes slidein {
+from {background-position: top; background-size:1300px; }
+to {background-position: -100px 0px;background-size:2750px;}
+}
+
+@keyframes slidein {
+from {background-position: top;background-size:1300px; }
+to {background-position: -100px 0px;background-size:2750px;}
+
+}
+
+
+
+.center
+{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  margin: auto;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(75, 75, 250, 0.3);
+  border-radius: 3px;
+}
+.center h1{
+  text-align:center;
+  color:white;
+  font-family: 'Source Code Pro', monospace;
+  text-transform:uppercase;
+}"))
+  ),
+  
+
+tags$head(
+  # Note the wrapping of the string in HTML()
+  tags$style(HTML("body {
+  font-family: system-ui, sans-serif;
+  padding: 1rem;
+}
+
+
+table {
+  width: 100%;
+  height: 75vh;
+  margin: 0 auto;
+  display: block;
+  overflow-x: auto;
+}
+
+tbody {
+  
+  white-space: nowrap;
+}
+
+th,
+td {
+  padding: 1rem;
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  background: #4e5d6c;
+  text-align: left;
+}
+"))
+),
+  
+  
+
+
   
   tags$head(
     HTML(
@@ -78,7 +175,10 @@ ui <- fluidPage(
     )
   ),
   
+  
+  
   div(id = "kp", textOutput("keepAlive")) %>% shinyjs::hidden(),
+  div(id = "ip", textOutput("chekipadress")) %>% shinyjs::hidden(),
   
      theme = shinytheme("superhero"),
 
@@ -95,7 +195,8 @@ ui <- fluidPage(
           textInput("okpo", "Введіть єдрпоу підприємства:",),
           actionButton("act","Знайти",icon = icon("search", class = "normal")),
           downloadButton('downloadData', 'Зберегти в .xlsx'),
-          actionButton("search","Пошук на Smida",icon = icon("business-time", class = "normal")),
+          actionButton("search","Пошук на Smida",icon = icon("business-time", class = "normal"))
+          
         ),
 
         # Show a plot of the generated distribution
@@ -103,16 +204,25 @@ ui <- fluidPage(
           
           
           textOutput("company"),
+          
+          tags$body(tags$style('{height: 100%;}')),
           tags$head(tags$style('#company {color:red;font:strong;font-weight:bold;font-size:18px;}')),
           tags$body(tags$style('#companyinfo {color:lightgrey;background-color:black;font-size:12px;}')),
           tags$body(tags$style('#distTable {color:lightgrey;background-color:black;font-size:12px;}')),
           tags$body(tags$style('#companyinfo1 {color:lime;background-color:black;font-size:12px;}')),
           tags$style(type="text/css", "#companyinfo2 {color:lightgrey;background-color:black;font-size:12px;white-space: pre-wrap;}"),
           tags$style(type="text/css", "#manrep {color:lightgrey;background-color:black;font-size:12px;white-space: pre-wrap;}"),
+          tags$tbody(tags$style('.table.shiny-table {background-color:#4e5d6c;opacity:0.80;}')),
+          tags$tbody(tags$style('.table.shiny-table td {white-space: wrap;}')),
+
+          
+          #tags$tbody(tags$style('.table.shiny-table thead {white-space: nowrap;}')),
+          tags$body(tags$style('.col-sm-4 {opacity:0.80;}')),
+          #tags$body(tags$style('.tab-content {height:500px;}')),
           
           bsModal("modalExample",title = div("Smida", icon("search",class = "fa-beat")), "search", size = "large", verbatimTextOutput("companyinfo1"),
                   
-                  tabsetPanel(type = "tab", id = "mytabs2",
+                  tabsetPanel(type = "tab", id = "mytabs2", 
                               
                               tabPanel("Баланс", tableOutput("balance2")),  
                               tabPanel("Звіт про фінансові результати", tableOutput("finrez2")),
@@ -138,6 +248,51 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session)  {
+  
+  session$allowReconnect(TRUE)
+
+  #shinyjs::hide(id = "loginpage")
+  shinyjs::show(id = "loginpage")
+
+  
+  
+  runjs('$.getJSON("https://api.ipify.org/?format=json", function(data) {
+  var1 = JSON.stringify(data, null, 2);Shiny.setInputValue("var1", var1);
+});')
+  
+  ipaddress <- reactive({
+    if(length(input$var1) > 0){
+      x <- fromJSON(input$var1)$ip
+    }
+  })
+  
+##################### IP ADDRESS#####################  
+  # observeEvent(input$var1, {res <- ipaddress()})
+  # 
+  # #shinyjs::show(id = "loginpage")
+  # shinyjs::show(id = "ip")
+  # 
+  #     
+  #     output$chekipadress <- renderText({
+  # 
+  #       #shinyjs::show(id = "ip")
+  #       #fromJSON(input$var1)$ipAddress
+  #       if(length(ipaddress())>0){
+  #           if(ipaddress() == "213.110.152.168" ){
+  #             print(ipaddress())
+  #             shinyjs::show(id = "loginpage")
+  #   
+  #           }else{
+  #             shinyjs::hide(id = "loginpage")
+  #             print("ERROR 403 FORBIDDEN!")
+  #           }
+  #       }
+  #     })
+#####################################################       
+      
+      
+
+  
   
   output$keepAlive <- renderText({
     req(input$count)
@@ -236,6 +391,7 @@ server <- function(input, output, session)  {
 
   observeEvent(input$act,{
     
+    
     print(input$okpo)
     if (input$okpo == "") {
       output$company <- renderText("Ви не ввели єдрпоу!")
@@ -259,7 +415,8 @@ server <- function(input, output, session)  {
       return()
     }
     
-
+    
+    
     #lgr$add_appender(AppenderJson$new("logging.json"), name = "json")
     
     files <- read.table("files.txt",sep = ";", header = T)
@@ -432,6 +589,11 @@ server <- function(input, output, session)  {
     names(finzvit)[5] <- "01.01.2022"
     names(finzvit)[6] <- "01.01.2023"
     
+    #change number format
+      for (c in 3:ncol(finzvit)){
+          finzvit[,c] <- formatC(finzvit[,c], format="f", big.mark=" ", digits=0)
+      }
+    
     
     balance <- subset(merge(balance_aricles, finzvit[,c(2:6)], all.x=TRUE), select=c(1,7,6,5,4))
     balance[is.na(balance)] <- 0
@@ -440,7 +602,8 @@ server <- function(input, output, session)  {
     names(balance)[2] <- "Стаття"
     names(balance)[3] <- "Код рядка"
     balance <- balance[order(balance$id, decreasing = FALSE), ]
-    
+    balance[is.na(balance)] = ""
+
 
 
     finrez <- subset(merge(finrez_aricles, finzvit[,c(2:6)], all.x=TRUE), select=c(1,7,6,5,4))
@@ -450,7 +613,7 @@ server <- function(input, output, session)  {
     names(finrez)[2] <- "Стаття"
     names(finrez)[3] <- "Код рядка"
     finrez <- finrez[order(finrez$id, decreasing = FALSE), ]
-
+    finrez[is.na(finrez)] = ""
     
     
     #------------------------------------------------------------
@@ -529,14 +692,42 @@ server <- function(input, output, session)  {
     
     #finrez[is.na(finrez)] <- 0
     #38324809
-    
+ 
     output$balance <- renderTable({
+      
+      for (r in 1:nrow(balance)){
+        for (c in 4:ncol(balance)){
+
+          if(balance[r,c] < 0){
+            balance[r,c] <- paste0('<div style="background-color:red;text-align:right"><span>', balance[r,c], '</span></div>')
+          }else{
+            balance[r,c] <- paste0('<div style="text-align:right;"><span>', balance[r,c], '</span></div>')
+           }
+        }
+      }
+      
       balance
-    },bordered = F,striped = F,rownames = F, na = "", hover = T, spacing = c("xs")) 
+      
+    },bordered = F,striped = F,rownames = F, na = "", hover = T, spacing = c("xs"),  sanitize.text.function = function(x) x)
+    #},bordered = F,striped = F,rownames = F, na = "", hover = T, spacing = c("xs"))
+    
     
     output$finrez <- renderTable({
+      
+      for (r in 1:nrow(finrez)){
+        for (c in 4:ncol(finrez)){
+          
+          if(finrez[r,c] < 0){
+            finrez[r,c] <- paste0('<div style="background-color:red;text-align:right"><span>', finrez[r,c], '</span></div>')
+          }else{
+            finrez[r,c] <- paste0('<div style="text-align:right;"><span>', finrez[r,c], '</span></div>')
+          }
+        }
+      }
+    
       finrez
-    },bordered = F,striped = F,rownames = F, na = "", hover = T) 
+    },bordered = F,striped = F,rownames = F, na = "", hover = T, spacing = c("xs"),  sanitize.text.function = function(x) x)
+    #},bordered = F,striped = F,rownames = F, na = "", hover = T) 
     
     output$companyinfo <- renderPrint({
       companyInfo
@@ -635,6 +826,7 @@ server <- function(input, output, session)  {
         }
       
     )
+  
     
     
   })
@@ -688,6 +880,7 @@ server <- function(input, output, session)  {
     
     #smidaurl <- paste0("https://smida.gov.ua/db/api/v1/feed-index.xml?edrpou=", input$okpo, "&date=2022-12-31,2023-12-31")
     smidaurl <- paste0("https://smida.gov.ua/db/api/v1/feed-index.xml?edrpou=", input$okpo, "&date=", dateMin, ",",dateMax)
+    #smidaurl <- paste0("https://smida.gov.ua/db/api/v1/feed-index.xml?edrpou=", input$okpo)
     print(smidaurl)
     
     shinyjs::html(id = "companyinfo1", "Йде пошук звітності")
@@ -829,6 +1022,12 @@ server <- function(input, output, session)  {
       mutate(finzvit, ROW = substring(ROW,3,6)) -> finzvit
       finzvit<-finzvit[,order(colnames(finzvit),decreasing=TRUE)]
       
+      #change number format
+      for (c in 2:ncol(finzvit)){
+        finzvit[,c] <- formatC(finzvit[,c], format="f", big.mark=" ", digits=0)
+      }
+      
+      
       balance_aricles <- read.csv("BALANCE_ARTICLES.txt", sep = ";", header = T, encoding = '1251')
       finrez_aricles <- read.csv("FINREZ_ARTICLES.txt", sep = ";", header = T, encoding = '1251')
       
@@ -898,10 +1097,26 @@ server <- function(input, output, session)  {
   
   
   output$balance2 <- renderTable({
+    
     balanceV$data
+
   })
+#},bordered = F,striped = F,rownames = F, na = "", hover = T, spacing = c("xs"),  sanitize.text.function = function(x) x)
   
   output$finrez2 <- renderTable({
+    # finrezV$data[is.na(finrezV$data)] = ""
+    # 
+    # for (r in 1:nrow(finrezV$data)){
+    #   for (c in 4:ncol(finrezV$data)){
+    #     
+    #     if(finrezV$data[r,c] < 0){
+    #       finrezV$data[r,c] <- paste0('<div style="background-color:red;text-align:right"><span>', finrezV$data[r,c], '</span></div>')
+    #     }else{
+    #       finrezV$data[r,c] <- paste0('<div style="text-align:right;"><span>', finrezV$data[r,c], '</span></div>')
+    #     }
+    #   }z
+    # }
+    
     finrezV$data
   })
   
