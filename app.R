@@ -21,6 +21,7 @@ library(data.table)
 library(RMySQL)
 library(XML)
 library(xml2)
+library(shinyWidgets)
 #library(tableHTML)
 #library(rvest)
 #library(httr)
@@ -127,7 +128,7 @@ tags$head(
 
 table {
   width: 100%;
-  height: 75vh;
+  height: 70vh;
   margin: 0 auto;
   display: block;
   overflow-x: auto;
@@ -195,7 +196,8 @@ thead {
           textInput("okpo", "Введіть єдрпоу підприємства:",),
           actionButton("act","Знайти",icon = icon("search", class = "normal")),
           downloadButton('downloadData', 'Зберегти в .xlsx'),
-          actionButton("search","Пошук на Smida",icon = icon("business-time", class = "normal"))
+          actionButton("search","Smida",icon = icon("business-time", class = "normal")),
+          #sliderTextInput("slide1", "Показати приріст між датами", choices = c("01.01.2023", "01.01.2022","01.01.2021","01.01.2020"), selected=c("01.01.2023","01.01.2022"), grid = T),
           
         ),
 
@@ -205,6 +207,13 @@ thead {
           
           textOutput("company"),
           
+          
+          
+          #sliderTextInput("slide", "Показати приріст між датами", choices = c("01.01.2023", "01.01.2022","01.01.2021","01.01.2020"), selected=c("01.01.2023","01.01.2022"), grid = T,width = '100%'),
+        
+          tags$body(tags$style('.sw-dropdown-content.animated.sw-show {color:lightgrey;background-color:black;font-size:12px;}')),
+          tags$body(tags$style('.sw-dropdown-in {color:lightgrey;background-color:black;font-size:12px;}')),
+          tags$style('#slide-label {text-align:center;}'),
           tags$body(tags$style('{height: 100%;}')),
           tags$head(tags$style('#company {color:red;font:strong;font-weight:bold;font-size:18px;}')),
           tags$body(tags$style('#companyinfo {color:lightgrey;background-color:black;font-size:12px;}')),
@@ -214,6 +223,7 @@ thead {
           tags$style(type="text/css", "#manrep {color:lightgrey;background-color:black;font-size:12px;white-space: pre-wrap;}"),
           tags$tbody(tags$style('.table.shiny-table {background-color:#4e5d6c;opacity:0.80;}')),
           tags$tbody(tags$style('.table.shiny-table td {white-space: wrap;}')),
+    
 
           
           #tags$tbody(tags$style('.table.shiny-table thead {white-space: nowrap;}')),
@@ -231,6 +241,18 @@ thead {
                               tabPanel("Власники", tableOutput("founders2"))),
                   
                   tableOutput("distTable")),
+          
+          dropdown(
+            
+            sliderTextInput("slide", "Приріст між датами", choices = c("01.01.2023", "01.01.2022","01.01.2021","01.01.2020"), selected=c("01.01.2023","01.01.2022"), grid = T),,
+            
+            style = "minimal", icon = icon("gear"),size = "sm",
+            status = "default", width = "300px",
+            animate = animateOptions(
+              enter = animations$fading_entrances$fadeInLeftBig,
+              #exit = animations$fading_exits$fadeOutRightBig
+            ),label = "змінити прирости"
+          ),
           
           tabsetPanel(type = "tab", id = "mytabs",
           
@@ -590,9 +612,9 @@ server <- function(input, output, session)  {
     names(finzvit)[6] <- "01.01.2023"
     
     #change number format
-      for (c in 3:ncol(finzvit)){
-          finzvit[,c] <- formatC(finzvit[,c], format="f", big.mark=" ", digits=0)
-      }
+      # for (c in 3:ncol(finzvit)){
+      #     finzvit[,c] <- formatC(finzvit[,c], format="f", big.mark=" ", digits=0)
+      # }
     
     
     balance <- subset(merge(balance_aricles, finzvit[,c(2:6)], all.x=TRUE), select=c(1,7,6,5,4))
@@ -695,16 +717,41 @@ server <- function(input, output, session)  {
  
     output$balance <- renderTable({
       
+      balance <- cbind(balance, Приріст = as.numeric(unlist(balance[input$slide[1]])) - as.numeric(unlist(balance[input$slide[2]])))
+      
+      balance$Приріст[is.na(balance$Приріст)] = ""
+  
+      
+      balance <- balance %>% relocate(Приріст, .after = "Код рядка")
+      
       for (r in 1:nrow(balance)){
-        for (c in 4:ncol(balance)){
-
+        for (c in 5:ncol(balance)){
+          
+         if(balance[r,c] != ""){
           if(balance[r,c] < 0){
-            balance[r,c] <- paste0('<div style="background-color:red;text-align:right"><span>', balance[r,c], '</span></div>')
+            balance[r,c] <- paste0('<div style="background-color:#FF0800;text-align:right"><span>', formatC(as.numeric(balance[r,c]), format="f", big.mark=" ", digits=0), '</span></div>')
           }else{
-            balance[r,c] <- paste0('<div style="text-align:right;"><span>', balance[r,c], '</span></div>')
-           }
+            balance[r,c] <- paste0('<div style="text-align:right;"><span>', formatC(as.numeric(balance[r,c]), format="f", big.mark=" ", digits=0), '</span></div>')
+          }
+         }
+          
         }
       }
+      
+      for (r in 1:nrow(balance)){
+        for (c in 4:4){
+          
+          if(balance[r,c] != ""){
+            if(balance[r,c] < 0){
+              balance[r,c] <- paste0('<div style="color:#FF0800;text-align:right"><span>', formatC(as.numeric(balance[r,c]), format="f", big.mark=" ", digits=0), '</span></div>')
+            }else{
+              balance[r,c] <- paste0('<div style="color:#3FFF00;text-align:right;"><span>', formatC(as.numeric(balance[r,c]), format="f", big.mark=" ", digits=0), '</span></div>')
+            }
+          }
+          
+        }
+      }
+
       
       balance
       
@@ -714,16 +761,41 @@ server <- function(input, output, session)  {
     
     output$finrez <- renderTable({
       
+      finrez <- cbind(finrez, Приріст = as.numeric(unlist(finrez[input$slide[1]])) - as.numeric(unlist(finrez[input$slide[2]])))
+      
+      finrez$Приріст[is.na(finrez$Приріст)] = ""
+      
+      
+      finrez <- finrez %>% relocate(Приріст, .after = "Код рядка")
+      
       for (r in 1:nrow(finrez)){
-        for (c in 4:ncol(finrez)){
+        for (c in 5:ncol(finrez)){
           
-          if(finrez[r,c] < 0){
-            finrez[r,c] <- paste0('<div style="background-color:red;text-align:right"><span>', finrez[r,c], '</span></div>')
-          }else{
-            finrez[r,c] <- paste0('<div style="text-align:right;"><span>', finrez[r,c], '</span></div>')
+          if(finrez[r,c] != ""){
+            if(finrez[r,c] < 0){
+              finrez[r,c] <- paste0('<div style="background-color:#FF0800;text-align:right"><span>', formatC(as.numeric(finrez[r,c]), format="f", big.mark=" ", digits=0), '</span></div>')
+            }else{
+              finrez[r,c] <- paste0('<div style="text-align:right;"><span>', formatC(as.numeric(finrez[r,c]), format="f", big.mark=" ", digits=0), '</span></div>')
+            }
           }
+          
         }
       }
+      
+      for (r in 1:nrow(finrez)){
+        for (c in 4:4){
+          
+          if(finrez[r,c] != ""){
+            if(finrez[r,c] < 0){
+              finrez[r,c] <- paste0('<div style="color:#FF0800;text-align:right"><span>', formatC(as.numeric(finrez[r,c]), format="f", big.mark=" ", digits=0), '</span></div>')
+            }else{
+              finrez[r,c] <- paste0('<div style="color:#3FFF00;text-align:right;"><span>', formatC(as.numeric(finrez[r,c]), format="f", big.mark=" ", digits=0), '</span></div>')
+            }
+          }
+          
+        }
+      }
+      
     
       finrez
     },bordered = F,striped = F,rownames = F, na = "", hover = T, spacing = c("xs"),  sanitize.text.function = function(x) x)
