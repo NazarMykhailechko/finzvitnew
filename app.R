@@ -215,7 +215,7 @@ thead {
           tags$body(tags$style('.sw-dropdown-in {color:lightgrey;background-color:black;font-size:12px;}')),
           tags$style('#slide-label {text-align:center;}'),
           tags$body(tags$style('{height: 100%;}')),
-          tags$head(tags$style('#company {color:red;font:strong;font-weight:bold;font-size:18px;}')),
+          tags$head(tags$style('#company {color:magenta;font:strong;font-weight:bold;font-size:18px;}')),
           tags$body(tags$style('#companyinfo {color:lightgrey;background-color:black;font-size:12px;}')),
           tags$body(tags$style('#distTable {color:lightgrey;background-color:black;font-size:12px;}')),
           tags$body(tags$style('#companyinfo1 {color:lime;background-color:black;font-size:12px;}')),
@@ -720,7 +720,7 @@ server <- function(input, output, session)  {
       balance <- cbind(balance, Приріст = as.numeric(unlist(balance[input$slide[1]])) - as.numeric(unlist(balance[input$slide[2]])))
       
       balance$Приріст[is.na(balance$Приріст)] = ""
-  
+
       
       balance <- balance %>% relocate(Приріст, .after = "Код рядка")
       
@@ -752,8 +752,16 @@ server <- function(input, output, session)  {
         }
       }
 
+      for (iterator in colnames(balance)){
+        if (iterator == input$slide[1] || iterator == input$slide[2]){
+          names(balance)[names(balance) == iterator] <-  paste0('<div style="color:magenta;"><span>', iterator, '</span></div>')
+        }
+      }
+      
       
       balance
+      
+
       
     },bordered = F,striped = F,rownames = F, na = "", hover = T, spacing = c("xs"),  sanitize.text.function = function(x) x)
     #},bordered = F,striped = F,rownames = F, na = "", hover = T, spacing = c("xs"))
@@ -796,6 +804,11 @@ server <- function(input, output, session)  {
         }
       }
       
+      for (iterator in colnames(finrez)){
+        if (iterator == input$slide[1] || iterator == input$slide[2]){
+          names(finrez)[names(finrez) == iterator] <-  paste0('<div style="color:magenta;"><span>', iterator, '</span></div>')
+        }
+      }
     
       finrez
     },bordered = F,striped = F,rownames = F, na = "", hover = T, spacing = c("xs"),  sanitize.text.function = function(x) x)
