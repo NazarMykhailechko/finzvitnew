@@ -1,0 +1,12 @@
+name: finzvit
+title: finzvit
+username: accord
+account: accord
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 10412170
+bundleId: 8028133
+url: https://accord.shinyapps.io/finzvit/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
